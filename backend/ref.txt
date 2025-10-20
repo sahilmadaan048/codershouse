@@ -1,0 +1,22 @@
+mkdir backend
+cd beckend
+yarn init -y 
+yarn add express dotenv
+yarn add -D nodemon
+yarn dev
+yarn add twilio (for sms notifications on mobile number)
+yarn add mongoose
+yarn add jsonwebtoken
+yarn add axios
+REST client extension
+
+
+
+to generate secret hex key
+
+in the node environment in the terminal
+
+crypto.randomBytes(64).toString('hex');
+
+
+yard add cors
