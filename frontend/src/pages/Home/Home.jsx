@@ -15,26 +15,23 @@ const Home = () => {
   const navigate = useNavigate();
 
   function startRegister() {
-    navigate("/register");
-    console.log("Button clicked......");
+    navigate("/authenticate");
+    console.log("Button Clicked.........");
   }
 
   return (
     <div className={styles.cardWrapper}>
-      <Card title="Welcome to Codershouse!" icon="logo">
+      <Card title="Welcome to CodersHouse!" icon="logo">
         <p className={styles.text}>
-          We’re working hard to get Codershouse ready for everyone! While we
+          We’re working hard to get CodersHouse ready for everyone! While we
           wrap up the finishing touches, we’re adding people gradually to make
           sure nothing breaks.
         </p>
         <div>
-          <Button onClick={startRegister} text="Get your username" />
+          <Button onClick={startRegister} text="Let's Go" />
         </div>
         <div className={styles.signinWrapper}>
           <span className={styles.hasInvite}>Have an invite text?</span>
-          <Link style={signInLinkStyle} to="/login">
-            Sign in
-          </Link>
         </div>
       </Card>
     </div>
