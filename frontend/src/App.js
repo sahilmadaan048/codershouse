@@ -21,7 +21,7 @@ function App() {
   );
 }
 
-// GuestRoute: For non-authenticated users
+// GuestRoute: For non-authenticated users 
 const GuestRoute = ({ children }) => {
   const { isAuth } = useSelector((state) => state.auth);
   return isAuth ? <Navigate to="/rooms" /> : children;

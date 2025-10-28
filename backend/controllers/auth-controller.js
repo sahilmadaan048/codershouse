@@ -21,7 +21,7 @@ class AuthController {
     // send otp
     try {
       // await otpService.sendBySms(phone, otp);
-      return res.json({
+      res.json({
         hash: `${hash}.${expires}`,
         phone,
         otp,
@@ -48,7 +48,7 @@ class AuthController {
     const isValid = otpService.verifyOtp(hashedOtp, data);
     if (!isValid) {
       return res.status(500).json({ message: "Invalid OTP!" });
-    }
+    } 
 
     let user;
     try {
@@ -59,19 +59,26 @@ class AuthController {
     } catch (err) {
       console.log(err);
       return res.status(500).json({ message: "DB error" });
-    }  
+    }
 
     // jwt token generate
-    const {accessToken, refreshToken} = tokenService.generateTokens({id: user._id, activated: false});
+    const { accessToken, refreshToken } = tokenService.generateTokens({ id: user._id, activated: false });
 
-    res.cookie('refreshtoken',refreshToken, {
+    await tokenService.storeRefreshToken(refreshToken, user._id);
+
+    res.cookie('refreshToken', refreshToken, {
       maxAge: 1000 * 60 * 60 * 24 * 30,
-      httpOnly: true,  
+      httpOnly: true,
+    });
+
+    res.cookie('accessToken', accessToken, {
+      maxAge: 1000 * 60 * 60 * 24 * 30,
+      httpOnly: true,
     });
 
     const userDto = new UserDto(user);
-    return res.json({accessToken, user: userDto});
-  } 
+    res.json({ user: userDto, auth: true });
+  }
 }
 
 module.exports = new AuthController();
