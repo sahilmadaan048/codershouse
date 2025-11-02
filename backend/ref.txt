@@ -20,3 +20,9 @@ crypto.randomBytes(64).toString('hex');
 
 
 yard add cors
+npm uninstall jimp
+npm install jimp@0.22.10
+
+🧠 Why?
+
+Because Jimp 0.22.10 is the last version that supports require('jimp') with .read().

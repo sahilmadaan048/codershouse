@@ -4,8 +4,8 @@ import Button from "../../../components/shared/Button/Button";
 import styles from "./StepAvatar.module.css";
 import { useSelector, useDispatch } from "react-redux";
 import { setAvatar } from "../../../store/activateSlice";
-import { activate } from "../../../http";
 import { setAuth } from "../../../store/authSlice";
+import { activate } from "../../../http";
 
 const StepAvatar = ({ onNext }) => {
   const dispatch = useDispatch();
@@ -26,7 +26,6 @@ const StepAvatar = ({ onNext }) => {
       if (data.auth) {
         dispatch(setAuth(data));
       }
-      console.log(data);
     } catch (err) {
       console.log(err);
     }

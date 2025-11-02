@@ -6,12 +6,16 @@ const router = require("./routes");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
 app.use(cookieParser());
-const corsOption = {
-  origin: ["http://localhost:3000"],
-  credentials: true,
-};
-app.use(cors(corsOption));
 app.use('/storage', express.static('storage'));
 
 const PORT = process.env.PORT || 5500;
