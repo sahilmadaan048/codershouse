@@ -6,9 +6,14 @@ import Home from "./pages/Home/Home.jsx";
 import Authenticate from "./pages/Authenticate/Authenticate.jsx";
 import Activate from './pages/Activate/Activate.jsx';
 import Rooms from './pages/Rooms/Rooms.jsx';
+import { useLoadingWithRefresh } from './hooks/useLoadingWithRefresh.js';
+import Loader from './components/shared/Loader/Loader.jsx';
 
 function App() {
-  return (
+  // call refresh endpoint
+  const { loading } = useLoadingWithRefresh();
+
+  return loading ? (<Loader message="Loading, please wait..."/>) : (
     <BrowserRouter>
       <Navigation />
       <Routes>

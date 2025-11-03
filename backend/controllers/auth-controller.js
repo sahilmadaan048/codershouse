@@ -67,7 +67,7 @@ class AuthController {
     await tokenService.storeRefreshToken(refreshToken, user._id);
 
     res.cookie('refreshToken', refreshToken, {
-      maxAge: 1000 * 60 * 60 * 24 * 30,
+      maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
       httpOnly: true,
     });
 
@@ -76,28 +76,36 @@ class AuthController {
       httpOnly: true,
     });
 
+
     const userDto = new UserDto(user);
     res.json({ user: userDto, auth: true });
   }
 
   async refresh(req, res) {
     // get refresh token from cookie
+    // console.log("the cookie is ", req.cookies);
     const { refreshToken: refreshTokenFromCookie } = req.cookies;
+    // console.log(refreshTokenFromCookie);
     // check if token is valid
     let userData;
     try {
       userData = await tokenService.verifyRefreshToken(
         refreshTokenFromCookie
       );
+      console.log("user data is ", userData)
+      // console.log("uiser data is", userData);
     } catch (err) {
       return res.status(401).json({ message: 'Invalid Token' });
     }
+    console.log("line 100 of auth controller");
     // Check if token is in db
     try {
       const token = await tokenService.findRefreshToken(
-        userData._id,
+        userData.id,
         refreshTokenFromCookie
       );
+      console.log("id is ", userData.id);
+      console.log("line 108 token is ", token);
       if (!token) {
         return res.status(401).json({ message: 'Invalid token' });
       }
@@ -105,7 +113,8 @@ class AuthController {
       return res.status(500).json({ message: 'Internal error' });
     }
     // check if valid user
-    const user = await userService.findUser({ _id: userData._id });
+    const user = await userService.findUser({ id: userData._id });
+    console.log("line 116 user is ", user);
     if (!user) {
       return res.status(404).json({ message: 'No user' });
     }
@@ -122,7 +131,7 @@ class AuthController {
     }
     // put in cookie
     res.cookie('refreshToken', refreshToken, {
-      maxAge: 1000 * 60 * 60 * 24 * 30,
+      maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
       httpOnly: true,
     });
 
@@ -130,8 +139,10 @@ class AuthController {
       maxAge: 1000 * 60 * 60 * 24 * 30,
       httpOnly: true,
     });
+
     // response
     const userDto = new UserDto(user);
+    console.log("line 143 of auth controller");
     res.json({ user: userDto, auth: true });
   }
 
