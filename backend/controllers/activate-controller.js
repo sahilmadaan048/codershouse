@@ -32,6 +32,7 @@ class ActivateController {
         }
 
         const userId = req.user.id;
+        console.log("line 35 and user is : ");
         console.log(userId);
         try {
             const user = await userService.findUser({ _id: userId });

@@ -85,27 +85,21 @@ class AuthController {
     // get refresh token from cookie
     // console.log("the cookie is ", req.cookies);
     const { refreshToken: refreshTokenFromCookie } = req.cookies;
-    // console.log(refreshTokenFromCookie);
-    // check if token is valid
     let userData;
     try {
       userData = await tokenService.verifyRefreshToken(
         refreshTokenFromCookie
       );
-      console.log("user data is ", userData)
-      // console.log("uiser data is", userData);
     } catch (err) {
       return res.status(401).json({ message: 'Invalid Token' });
     }
-    console.log("line 100 of auth controller");
+    
     // Check if token is in db
     try {
       const token = await tokenService.findRefreshToken(
         userData.id,
         refreshTokenFromCookie
       );
-      console.log("id is ", userData.id);
-      console.log("line 108 token is ", token);
       if (!token) {
         return res.status(401).json({ message: 'Invalid token' });
       }
@@ -114,18 +108,17 @@ class AuthController {
     }
     // check if valid user
     const user = await userService.findUser({ id: userData._id });
-    console.log("line 116 user is ", user);
     if (!user) {
       return res.status(404).json({ message: 'No user' });
     }
     // Generate new tokens
     const { refreshToken, accessToken } = tokenService.generateTokens({
-      _id: userData._id,
+      _id: userData.id,
     });
 
     // Update refresh token
     try {
-      await tokenService.updateRefreshToken(userData._id, refreshToken);
+      await tokenService.updateRefreshToken(userData.id, refreshToken);
     } catch (err) {
       return res.status(500).json({ message: 'Internal error' });
     }
@@ -142,7 +135,6 @@ class AuthController {
 
     // response
     const userDto = new UserDto(user);
-    console.log("line 143 of auth controller");
     res.json({ user: userDto, auth: true });
   }
 

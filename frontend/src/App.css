@@ -30,6 +30,11 @@ img {
     height: auto;
 }
 
+button {
+    background: none;
+    border: none;
+}
+
 body {
     background: #121212;
     font-family: 'Nunito', sans-serif;

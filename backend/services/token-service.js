@@ -35,11 +35,8 @@ class tokenService {
     }
 
     async findRefreshToken(userId, refreshToken) {
-        console.log("userId is ", userId);
-        console.log("refreshToken is ", refreshToken);
         try {
             const ans = await refreshModel.findOne({ userId: userId, token: refreshToken });
-            console.log("Found refresh token:", ans);
             return ans;
         } catch (err) {
             console.error("Error while finding refresh token:", err);
