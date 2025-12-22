@@ -7,6 +7,7 @@ import { setAvatar } from "../../../store/activateSlice";
 import { activate } from "../../../http";
 import { setAuth } from "../../../store/authSlice";
 import Loader from "../../../components/shared/Loader/Loader";
+import { useNavigate } from "react-router-dom";
 
 const StepAvatar = ({ onNext }) => {
   const dispatch = useDispatch();
@@ -14,6 +15,7 @@ const StepAvatar = ({ onNext }) => {
   const [image, setImage] = useState("/images/monkey-avatar.png");
   const [loading, setLoading] = useState(false);
   const [unMounted, setUnMounted] = useState(false);
+  const navigate = useNavigate();
 
   function captureImage(e) {
     const file = e.target.files[0];
@@ -29,9 +31,12 @@ const StepAvatar = ({ onNext }) => {
     setLoading(true);
     try {
       const { data } = await activate({ name, avatar });
+      console.log("Activation response: ", data);
       if (data.auth) {
-        if (!unMounted) {
+        console.log("goind to line 37");
+        if (unMounted) {
           dispatch(setAuth(data));
+          navigate("/rooms");
         }
       }
     } catch (err) {
@@ -41,6 +46,7 @@ const StepAvatar = ({ onNext }) => {
     }
   }
 
+  // cleanup function
   useEffect(() => {
     return () => {
       setUnMounted(true);

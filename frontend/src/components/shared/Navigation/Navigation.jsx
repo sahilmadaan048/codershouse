@@ -20,6 +20,7 @@ const Navigation = () => {
   };
   const dispatch = useDispatch();
   const { isAuth, user } = useSelector((state) => state.auth);
+
   async function logoutUser() {
     try {
       const { data } = await logout();

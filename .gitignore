@@ -11,3 +11,7 @@ backend/node_modules/
 
 /images
 ref.txt
+
+backend/storage/
+
+api.rest

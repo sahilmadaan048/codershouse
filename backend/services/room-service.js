@@ -20,7 +20,11 @@ class RoomService {
     }
 
     async getRoom(roomId) {
-        const room = await RoomModel.findOne({ _id: roomId });
+        const room = await RoomModel.findById(roomId)
+            .populate('speakers')
+            .populate('ownerId')
+            .exec();
+
         return room;
     }
 }

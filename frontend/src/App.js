@@ -5,6 +5,7 @@ import Navigation from "./components/shared/Navigation/Navigation.jsx";
 import Home from "./pages/Home/Home.jsx";
 import Authenticate from "./pages/Authenticate/Authenticate.jsx";
 import Activate from './pages/Activate/Activate.jsx';
+import Room from './pages/Room/Room.jsx';
 import Rooms from './pages/Rooms/Rooms.jsx';
 import { useLoadingWithRefresh } from './hooks/useLoadingWithRefresh.js';
 import Loader from './components/shared/Loader/Loader.jsx';
@@ -21,6 +22,7 @@ function App() {
         <Route path="/authenticate" element={<GuestRoute><Authenticate /></GuestRoute>} />
         <Route path="/activate" element={<SemiProtectedRoute><Activate /></SemiProtectedRoute>} />
         <Route path="/rooms" element={<ProtectedRoute><Rooms /></ProtectedRoute>} />
+        <Route path="/room/:id" element={<ProtectedRoute><Room /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );

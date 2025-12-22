@@ -5,6 +5,7 @@ const DbConnect = require("./database");
 const router = require("./routes");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const path = require("path");
 
 app.use(
   cors({
@@ -16,7 +17,9 @@ app.use(
 );
 
 app.use(cookieParser());
-app.use('/storage', express.static('storage'));
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 const PORT = process.env.PORT || 5500;
 DbConnect();

@@ -82,49 +82,42 @@ class AuthController {
   }
 
   async refresh(req, res) {
-    // get refresh token from cookie
-    // console.log("the cookie is ", req.cookies);
     const { refreshToken: refreshTokenFromCookie } = req.cookies;
+
+    if (!refreshTokenFromCookie) {
+      return res.status(401).json({ message: 'No refresh token' });
+    }
+
     let userData;
     try {
-      userData = await tokenService.verifyRefreshToken(
-        refreshTokenFromCookie
-      );
+      userData = await tokenService.verifyRefreshToken(refreshTokenFromCookie);
     } catch (err) {
-      return res.status(401).json({ message: 'Invalid Token' });
+      return res.status(401).json({ message: 'Invalid token' });
     }
-    
-    // Check if token is in db
-    try {
-      const token = await tokenService.findRefreshToken(
-        userData.id,
-        refreshTokenFromCookie
-      );
-      if (!token) {
-        return res.status(401).json({ message: 'Invalid token' });
-      }
-    } catch (err) {
-      return res.status(500).json({ message: 'Internal error' });
+
+    const tokenInDb = await tokenService.findRefreshToken(
+      userData.id,
+      refreshTokenFromCookie
+    );
+
+    if (!tokenInDb) {
+      return res.status(401).json({ message: 'Invalid token' });
     }
-    // check if valid user
-    const user = await userService.findUser({ id: userData._id });
+
+    const user = await userService.findUser({ _id: userData.id });
     if (!user) {
       return res.status(404).json({ message: 'No user' });
     }
-    // Generate new tokens
+
     const { refreshToken, accessToken } = tokenService.generateTokens({
-      _id: userData.id,
+      id: user._id,
+      activated: user.activated,
     });
 
-    // Update refresh token
-    try {
-      await tokenService.updateRefreshToken(userData.id, refreshToken);
-    } catch (err) {
-      return res.status(500).json({ message: 'Internal error' });
-    }
-    // put in cookie
+    await tokenService.updateRefreshToken(user._id, refreshToken);
+
     res.cookie('refreshToken', refreshToken, {
-      maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+      maxAge: 1000 * 60 * 60 * 24 * 30,
       httpOnly: true,
     });
 
@@ -133,10 +126,10 @@ class AuthController {
       httpOnly: true,
     });
 
-    // response
     const userDto = new UserDto(user);
     res.json({ user: userDto, auth: true });
   }
+
 
   async logout(req, res) {
     const { refreshToken } = req.cookies;

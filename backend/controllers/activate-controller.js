@@ -31,18 +31,21 @@ class ActivateController {
             return res.status(500).json({ message: 'Could not process the image' });
         }
 
+        // console.log(req.user);
         const userId = req.user.id;
         console.log("line 35 and user is : ");
-        console.log(userId);
+        // console.log(userId);
         try {
             const user = await userService.findUser({ _id: userId });
             if (!user) {
                 return res.status(404).json({ message: 'User not found!' });
             }
-            console.log("activate controller ke ander! 44")
+            // console.log("line 43 of activate contreollr: ", user);
+            // console.log("activate controller ke ander! 44")
             user.activated = true;
             user.name = name;
-            user.avatar = `/storage/${imagePath}`;
+            user.avatar = `${process.env.IMAGE_BASE_URL}/backend/storage/${imagePath}`;
+            // console.log("line 43 of activate contreollr: ", user);
             await user.save();
             return res.json({ user: new UserDto(user), auth: true });
         } catch (err) {
