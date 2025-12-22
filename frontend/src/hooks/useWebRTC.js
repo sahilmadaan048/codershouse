@@ -1,38 +1,94 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { ACTIONS } from '../actions.js';
+import { ACTIONS } from '../actions';
 import socketInit from '../socket';
 import freeice from 'freeice';
 import { useStateWithCallback } from './useStateWithCallback';
 
 export const useWebRTC = (roomId, user) => {
     const [clients, setClients] = useStateWithCallback([]);
-    const audioElements = useRef({});
-    const connections = useRef({});
+
     const socket = useRef(null);
+    const connections = useRef({});
+    const audioElements = useRef({});
     const localMediaStream = useRef(null);
 
-    //  SAFE: Always works with latest state
+    // ===============================
+    // Add client safely (NO DUPES)
+    // ===============================
     const addNewClient = useCallback((newClient, cb) => {
-        setClients((existingClients) => {
-            const alreadyExists = existingClients.some(
-                (client) => client.id === newClient.id
-            );
-
-            if (alreadyExists) {
-                return existingClients;
+        setClients((clients) => {
+            if (clients.find((c) => c.id === newClient.id)) {
+                return clients;
             }
-
-            return [...existingClients, newClient];
+            return [...clients, { ...newClient, muted: true }];
         }, cb);
     }, [setClients]);
 
-    // Init socket once
+    // ===============================
+    // Init socket ONCE
+    // ===============================
     useEffect(() => {
         socket.current = socketInit();
+        return () => {
+            socket.current?.disconnect();
+        };
     }, []);
 
     // ===============================
-    // Handle new peer (REGISTER ONCE)
+    // Capture local media + join
+    // ===============================
+    useEffect(() => {
+        let mounted = true;
+
+        const startCapture = async () => {
+            try {
+                const stream =
+                    await navigator.mediaDevices.getUserMedia({
+                        audio: true,
+                    });
+
+                if (!mounted) {
+                    stream.getTracks().forEach((t) => t.stop());
+                    return;
+                }
+
+                localMediaStream.current = stream;
+
+                addNewClient(user, () => {
+                    const audio = audioElements.current[user.id];
+                    if (audio) {
+                        audio.volume = 0;
+                        audio.srcObject = stream;
+                    }
+                });
+
+                socket.current.emit(ACTIONS.JOIN, {
+                    roomId,
+                    user,
+                });
+            } catch (err) {
+                console.error('Mic access failed', err);
+            }
+        };
+
+        startCapture();
+
+        return () => {
+            mounted = false;
+
+            if (localMediaStream.current) {
+                localMediaStream.current
+                    .getTracks()
+                    .forEach((t) => t.stop());
+                localMediaStream.current = null;
+            }
+
+            socket.current?.emit(ACTIONS.LEAVE, { roomId });
+        };
+    }, [roomId, user, addNewClient]);
+
+    // ===============================
+    // Handle new peer
     // ===============================
     useEffect(() => {
         const handleNewPeer = async ({
@@ -40,51 +96,44 @@ export const useWebRTC = (roomId, user) => {
             createOffer,
             user: remoteUser,
         }) => {
-            // Prevent duplicate peer connections
-            if (peerId in connections.current) {
-                return console.warn(
-                    `You are already connected with ${peerId} (${user.name})`
-                );
-            }
+            if (connections.current[peerId]) return;
 
-            connections.current[peerId] = new RTCPeerConnection({
+            const pc = new RTCPeerConnection({
                 iceServers: freeice(),
             });
 
-            // Handle ICE candidates
-            connections.current[peerId].onicecandidate = (event) => {
-                socket.current.emit(ACTIONS.RELAY_ICE, {
-                    peerId,
-                    icecandidate: event.candidate,
-                });
+            connections.current[peerId] = pc;
+
+            pc.onicecandidate = (e) => {
+                if (e.candidate) {
+                    socket.current.emit(ACTIONS.RELAY_ICE, {
+                        peerId,
+                        icecandidate: e.candidate,
+                    });
+                }
             };
 
-            // Handle incoming audio stream
-            connections.current[peerId].ontrack = ({
-                streams: [remoteStream],
-            }) => {
+            pc.ontrack = ({ streams: [remoteStream] }) => {
                 addNewClient(remoteUser, () => {
-                    const audioEl = audioElements.current[remoteUser.id];
-                    if (audioEl) {
-                        audioEl.srcObject = remoteStream;
+                    const audio =
+                        audioElements.current[remoteUser.id];
+                    if (audio) {
+                        audio.srcObject = remoteStream;
                     }
                 });
             };
 
-            // Add local tracks
             if (localMediaStream.current) {
-                localMediaStream.current.getTracks().forEach((track) => {
-                    connections.current[peerId].addTrack(
-                        track,
-                        localMediaStream.current
-                    );
-                });
+                localMediaStream.current
+                    .getTracks()
+                    .forEach((track) => {
+                        pc.addTrack(track, localMediaStream.current);
+                    });
             }
 
-            // Create offer if needed
             if (createOffer) {
-                const offer = await connections.current[peerId].createOffer();
-                await connections.current[peerId].setLocalDescription(offer);
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
 
                 socket.current.emit(ACTIONS.RELAY_SDP, {
                     peerId,
@@ -94,86 +143,48 @@ export const useWebRTC = (roomId, user) => {
         };
 
         socket.current.on(ACTIONS.ADD_PEER, handleNewPeer);
-
-        return () => {
+        return () =>
             socket.current.off(ACTIONS.ADD_PEER, handleNewPeer);
-        };
-    }, [addNewClient, user.name]);
+    }, [addNewClient]);
 
     // ===============================
-    // Capture local audio & join room
+    // ICE candidates
     // ===============================
     useEffect(() => {
-        const startCapture = async () => {
-            localMediaStream.current =
-                await navigator.mediaDevices.getUserMedia({ audio: true });
-        };
-
-        startCapture().then(() => {
-            // Add self
-            addNewClient(user, () => {
-                const localAudio = audioElements.current[user.id];
-                if (localAudio) {
-                    localAudio.volume = 0;
-                    localAudio.srcObject = localMediaStream.current;
-                }
-            });
-
-            socket.current.emit(ACTIONS.JOIN, {
-                roomId,
-                user,
-            });
-        });
-
-        return () => {
-            if (localMediaStream.current) {
-                localMediaStream.current
-                    .getTracks()
-                    .forEach((track) => track.stop());
-                localMediaStream.current = null;
-            }
-
-            if (socket.current) {
-                socket.current.emit(ACTIONS.LEAVE, { roomId });
+        const handleIce = ({ peerId, icecandidate }) => {
+            if (
+                icecandidate &&
+                connections.current[peerId]
+            ) {
+                connections.current[peerId].addIceCandidate(
+                    icecandidate
+                );
             }
         };
+
+        socket.current.on(ACTIONS.ICE_CANDIDATE, handleIce);
+        return () =>
+            socket.current.off(ACTIONS.ICE_CANDIDATE, handleIce);
     }, []);
 
     // ===============================
-    // Handle ICE candidates
+    // SDP exchange
     // ===============================
     useEffect(() => {
-        const handleIceCandidate = ({ peerId, icecandidate }) => {
-            if (icecandidate && connections.current[peerId]) {
-                connections.current[peerId].addIceCandidate(icecandidate);
-            }
-        };
-
-        socket.current.on(ACTIONS.ICE_CANDIDATE, handleIceCandidate);
-
-        return () => {
-            socket.current.off(ACTIONS.ICE_CANDIDATE, handleIceCandidate);
-        };
-    }, []);
-
-    // ===============================
-    // Handle SDP
-    // ===============================
-    useEffect(() => {
-        const setRemoteMedia = async ({
+        const handleSDP = async ({
             peerId,
             sessionDescription,
         }) => {
-            const connection = connections.current[peerId];
-            if (!connection) return;
+            const pc = connections.current[peerId];
+            if (!pc) return;
 
-            await connection.setRemoteDescription(
+            await pc.setRemoteDescription(
                 new RTCSessionDescription(sessionDescription)
             );
 
             if (sessionDescription.type === 'offer') {
-                const answer = await connection.createAnswer();
-                await connection.setLocalDescription(answer);
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
 
                 socket.current.emit(ACTIONS.RELAY_SDP, {
                     peerId,
@@ -182,34 +193,68 @@ export const useWebRTC = (roomId, user) => {
             }
         };
 
-        socket.current.on(ACTIONS.SESSION_DESCRIPTION, setRemoteMedia);
-
-        return () => {
-            socket.current.off(ACTIONS.SESSION_DESCRIPTION, setRemoteMedia);
-        };
+        socket.current.on(
+            ACTIONS.SESSION_DESCRIPTION,
+            handleSDP
+        );
+        return () =>
+            socket.current.off(
+                ACTIONS.SESSION_DESCRIPTION,
+                handleSDP
+            );
     }, []);
 
     // ===============================
-    // Handle peer leaving
+    // Peer leaving
     // ===============================
     useEffect(() => {
         const handleRemovePeer = ({ peerID, userId }) => {
             if (connections.current[peerID]) {
                 connections.current[peerID].close();
+                delete connections.current[peerID];
             }
 
-            delete connections.current[peerID];
             delete audioElements.current[userId];
 
-            setClients((list) => list.filter((c) => c.id !== userId));
+            setClients((clients) =>
+                clients.filter((c) => c.id !== userId)
+            );
         };
 
-        socket.current.on(ACTIONS.REMOVE_PEER, handleRemovePeer);
-
-        return () => {
-            socket.current.off(ACTIONS.REMOVE_PEER, handleRemovePeer);
-        };
+        socket.current.on(
+            ACTIONS.REMOVE_PEER,
+            handleRemovePeer
+        );
+        return () =>
+            socket.current.off(
+                ACTIONS.REMOVE_PEER,
+                handleRemovePeer
+            );
     }, [setClients]);
+
+    // ===============================
+    // Mute / Unmute (SAFE)
+    // ===============================
+    const handleMute = (mute, userId) => {
+        if (!localMediaStream.current) return;
+
+        localMediaStream.current
+            .getAudioTracks()
+            .forEach((t) => (t.enabled = !mute));
+
+        socket.current.emit(
+            mute ? ACTIONS.MUTE : ACTIONS.UNMUTE,
+            { roomId, userId }
+        );
+
+        setClients((clients) =>
+            clients.map((c) =>
+                c.id === userId
+                    ? { ...c, muted: mute }
+                    : c
+            )
+        );
+    };
 
     // ===============================
     // Provide audio ref
@@ -218,5 +263,10 @@ export const useWebRTC = (roomId, user) => {
         audioElements.current[userId] = instance;
     };
 
-    return { clients, provideRef };
+    return {
+        clients,
+        provideRef,
+        handleMute,
+        localStream: localMediaStream.current,
+    };
 };
