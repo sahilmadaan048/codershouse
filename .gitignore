@@ -8,6 +8,8 @@ backend/node_modules/
 /backend/.env
 
 *.env
+*.env.dev
+
 
 /images
 ref.txt
@@ -18,3 +20,5 @@ api.rest
 
 frontend/src/hooks/temp.js
 frontend/src/hooks/temp2.js
+frontend/.env.dev 
+backend/.env.dev 
