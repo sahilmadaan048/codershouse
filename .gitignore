@@ -22,3 +22,8 @@ frontend/src/hooks/temp.js
 frontend/src/hooks/temp2.js
 frontend/.env.dev 
 backend/.env.dev 
+
+
+.env
+.env.*
+backend/.env*
