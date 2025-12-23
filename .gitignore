@@ -1,29 +1,49 @@
-frontend/ref.txt
-
+# ========================
+# Node / Dependencies
+# ========================
+node_modules/
 frontend/node_modules/
 backend/node_modules/
 
-
-/frontend/.env
-/backend/.env
-
+# ========================
+# Environment files (CRITICAL)
+# ========================
+.env
+.env.*
 *.env
-*.env.dev
+*.env.*
+
+frontend/.env
+frontend/.env.*
+backend/.env
+backend/.env.*
+
+# ========================
+# Local / Dev-only files
+# ========================
+api.rest
+ref.txt
+frontend/ref.txt
+
+# ========================
+# Temporary / Experiments
+# ========================
+frontend/src/hooks/temp.js
+frontend/src/hooks/temp2.js
+
+# ========================
+# Storage / Uploads
+# ========================
+backend/storage/
+
+# ========================
+# OS / Editor
+# ========================
+.DS_Store
+Thumbs.db
 
 
 /images
-ref.txt
 
-backend/storage/
+ref.txt 
 
-api.rest
-
-frontend/src/hooks/temp.js
-frontend/src/hooks/temp2.js
-frontend/.env.dev 
-backend/.env.dev 
-
-
-.env
-.env.*
-backend/.env*
