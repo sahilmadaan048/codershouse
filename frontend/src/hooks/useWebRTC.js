@@ -234,7 +234,6 @@ export const useWebRTC = (roomId, user) => {
 
     // ===============================
     // Mute / Unmute (SAFE)
-    // ===============================
     const handleMute = (mute, userId) => {
         if (!localMediaStream.current) return;
 
@@ -255,6 +254,44 @@ export const useWebRTC = (roomId, user) => {
             )
         );
     };
+
+    useEffect(() => {
+        const handleMute = ({ userId }) => {
+            setClients((clients) =>
+                clients.map((c) =>
+                    c.id === userId ? { ...c, muted: true } : c
+                )
+            );
+
+            const audio = audioElements.current[userId];
+            if (audio) {
+                audio.muted = true;
+            }
+        };
+
+        const handleUnmute = ({ userId }) => {
+            setClients((clients) =>
+                clients.map((c) =>
+                    c.id === userId ? { ...c, muted: false } : c
+                )
+            );
+
+            const audio = audioElements.current[userId];
+            if (audio) {
+                audio.muted = false;
+            }
+        };
+
+        socket.current.on(ACTIONS.MUTE, handleMute);
+        socket.current.on(ACTIONS.UNMUTE, handleUnmute);
+
+        return () => {
+            socket.current.off(ACTIONS.MUTE, handleMute);
+            socket.current.off(ACTIONS.UNMUTE, handleUnmute);
+        };
+    }, [setClients]);
+
+
 
     // ===============================
     // Provide audio ref

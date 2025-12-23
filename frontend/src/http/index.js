@@ -1,15 +1,17 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: process.env.REACT_APP_API_URL,
+    baseURL: process.env.REACT_APP_API_URL || 'http://backend:5500',
     withCredentials: true,
     headers: {
-        'Content-type': 'application/json',
+        'Content-Type': 'application/json',
         Accept: 'application/json',
     },
 });
 
-// List of all the endpoints
+// =======================
+// API endpoints
+// =======================
 export const sendOtp = (data) => api.post('/api/send-otp', data);
 export const verifyOtp = (data) => api.post('/api/verify-otp', data);
 export const activate = (data) => api.post('/api/activate', data);
@@ -18,32 +20,36 @@ export const refresh = () => api.get('/api/refresh');
 export const createRoom = (data) => api.post('/api/rooms', data);
 export const getAllRooms = () => api.get('/api/rooms');
 export const getRoom = (roomId) => api.get(`/api/rooms/${roomId}`);
-// Interceptors
+
+// =======================
+// Response interceptor
+// =======================
 api.interceptors.response.use(
-    (config) => {
-        return config;
-    },
+    (response) => response,
     async (error) => {
-        const originalRequest = error.config;
-        if (
-            error.response.status === 401 &&
-            originalRequest &&
-            !originalRequest._isRetry
-        ) {
-            originalRequest.isRetry = true;
+        const originalRequest = error?.config;
+        const status = error?.response?.status;
+
+        // If backend is unreachable → do NOT crash
+        if (!status) {
+            console.error('Network error or backend unreachable');
+            return Promise.reject(error);
+        }
+
+        // Handle token refresh
+        if (status === 401 && originalRequest && !originalRequest._retry) {
+            originalRequest._retry = true;
+
             try {
-                await axios.get(
-                    `${process.env.REACT_APP_API_URL}/api/refresh`,
-                    {
-                        withCredentials: true,
-                    }
-                );
-                return api.request(originalRequest);
-            } catch (err) {
-                console.log(err.message);
+                await api.get('/api/refresh');
+                return api(originalRequest);
+            } catch (refreshError) {
+                console.error('Refresh failed');
+                return Promise.reject(refreshError);
             }
         }
-        throw error;
+
+        return Promise.reject(error);
     }
 );
 
